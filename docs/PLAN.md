@@ -97,7 +97,7 @@ SavedTheme(id, ownerUserId, name, tokens:jsonb)
 ## Fahrplan
 
 - **M0 — Fundament:** Monorepo (pnpm+Turborepo), `packages/shared` Zod, Nest+Prisma+Postgres,
-  Next+Auth.js+BFF-Verdrahtung, Docker Compose + Caddy + CI, next-intl (DE+EN), pino. *(dieses Gerüst)*
+  Next+Auth.js+BFF-Verdrahtung, Docker Compose + Caddy, next-intl (DE+EN), pino. *(dieses Gerüst)*
 - **M1 — Plattform/Accounts:** Auth + Claim-Gerüst, `User`+`tier`, komplettes Schema+Migrations,
   **minimale** Turnier-Erzeugung aus Single/Double-Elim-Template (Engine), Dashboard + History,
   **JSON Setup Import/Export** (round-trip getestet), Capability-Link-Datenschicht.
@@ -118,5 +118,5 @@ SavedTheme(id, ownerUserId, name, tokens:jsonb)
 | DB             | PostgreSQL · Prisma |
 | Shared         | `@tournamentify/shared` — Zod-Schemas (Domain + Import/Export) |
 | Infra          | Docker Compose · Caddy (TLS) · eigener VPS |
-| CI             | GitHub Actions (build · typecheck · lint · test) |
+| CI             | Bewusst keine — Checks lokal vor Commit, Deploy + Betrieb VPS-seitig |
 | Tests          | Vitest · Testcontainers · Playwright |
