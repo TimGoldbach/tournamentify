@@ -1,6 +1,68 @@
 {
   "home": {
     "title": "Tournamentify",
-    "subtitle": "Build your own tournament bracket – fast and exactly your way."
+    "subtitle": "Build your own tournament bracket – fast and exactly your way.",
+    "ctaCreate": "Create tournament",
+    "ctaDashboard": "My tournaments"
+  },
+  "dashboard": {
+    "title": "My tournaments",
+    "create": "New tournament",
+    "loading": "Loading tournaments …",
+    "loadError": "Could not load tournaments",
+    "emptyTitle": "You haven't created any tournaments yet.",
+    "emptyCta": "Create your first tournament",
+    "participants": "Participants",
+    "format": "Format",
+    "updated": "Updated",
+    "status": {
+      "DRAFT": "Draft",
+      "RUNNING": "Running",
+      "COMPLETED": "Completed"
+    },
+    "formatSingleElimination": "Single elimination",
+    "formatDoubleElimination": "Double elimination",
+    "formatRoundRobin": "Round robin",
+    "formatSwiss": "Swiss"
+  },
+  "create": {
+    "title": "New tournament",
+    "subtitle": "Set the name, format and participants.",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Summer Cup 2026",
+    "formatLabel": "Format",
+    "formatHelp": "Double elimination and Swiss arrive in M2/M3.",
+    "participantsLabel": "Participants",
+    "participantsPlaceholder": "One name per line",
+    "participantsHelp": "One name per line. The order sets the seeding.",
+    "submit": "Create tournament",
+    "submitting": "Creating …",
+    "submitError": "Could not create tournament",
+    "formatSingleElimination": "Single elimination",
+    "formatDoubleElimination": "Double elimination",
+    "formatRoundRobin": "Round robin",
+    "formatSwiss": "Swiss"
+  },
+  "detail": {
+    "loading": "Loading tournament …",
+    "loadError": "Could not load tournament",
+    "tbd": "TBD",
+    "group": "Group {number}",
+    "export": "Export",
+    "exportError": "Export failed",
+    "delete": "Delete",
+    "deleting": "Deleting …",
+    "deleteConfirm": "Really delete this tournament?",
+    "deleteError": "Could not delete tournament",
+    "editorComingSoon": "The visual bracket editor arrives in M2.",
+    "status": {
+      "DRAFT": "Draft",
+      "RUNNING": "Running",
+      "COMPLETED": "Completed"
+    },
+    "formatSingleElimination": "Single elimination",
+    "formatDoubleElimination": "Double elimination",
+    "formatRoundRobin": "Round robin",
+    "formatSwiss": "Swiss"
   }
 }
