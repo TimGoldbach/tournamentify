@@ -1,0 +1,7 @@
+# Local/dev: serve on :80 and proxy to the web container.
+# Production: replace ":80" with your domain (e.g. "tournamentify.app") and
+# Caddy auto-provisions a Let's Encrypt TLS certificate.
+:80 {
+	encode gzip
+	reverse_proxy web:3000
+}

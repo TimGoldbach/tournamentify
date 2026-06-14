@@ -1,0 +1,175 @@
+// Normalisiertes Turnier-Modell (brackets-manager-kompatibel).
+// Gruppen+KO = Tournament mit zwei Stages. Bracket-Seiten / RR-Gruppen = Group.
+// Opponent-Slots auf Match speichern entweder einen Seed/Participant oder eine
+// Source-Referenz (winner_of / loser_of / group_rank) als JSON.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserTier {
+  FREE
+  PRO
+}
+
+enum StageType {
+  SINGLE_ELIMINATION
+  DOUBLE_ELIMINATION
+  ROUND_ROBIN
+  SWISS
+}
+
+enum TournamentStatus {
+  DRAFT
+  RUNNING
+  COMPLETED
+}
+
+enum MatchStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+}
+
+enum CapabilityType {
+  VIEW
+  SCORE
+}
+
+model User {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  authProviderId String?      @unique
+  tier           UserTier     @default(FREE)
+  createdAt      DateTime     @default(now())
+  tournaments    Tournament[]
+  series         Series[]
+  themes         SavedTheme[]
+}
+
+// Ligen/Serien-Radar — Schema offen halten, Feature kommt später (M4).
+model Series {
+  id          String       @id @default(cuid())
+  ownerUserId String
+  owner       User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String
+  createdAt   DateTime     @default(now())
+  tournaments Tournament[]
+}
+
+model Tournament {
+  id             String           @id @default(cuid())
+  name           String
+  status         TournamentStatus @default(DRAFT)
+  // Owner ist entweder ein registrierter User ODER ein anonymer Gast-Token.
+  ownerUserId    String?
+  owner          User?            @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  anonOwnerToken String?          @unique
+  seriesId       String?
+  series         Series?          @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  settings       Json             @default("{}")
+  designTokens   Json             @default("{}")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  stages         Stage[]
+  participants   Participant[]
+  links          CapabilityLink[]
+
+  @@index([ownerUserId])
+  @@index([seriesId])
+}
+
+model Stage {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  type         StageType
+  number       Int
+  settings     Json       @default("{}")
+  groups       Group[]
+
+  @@unique([tournamentId, number])
+}
+
+model Group {
+  id      String  @id @default(cuid())
+  stageId String
+  stage   Stage   @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  number  Int
+  rounds  Round[]
+
+  @@unique([stageId, number])
+}
+
+model Round {
+  id           String  @id @default(cuid())
+  groupId      String
+  group        Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  number       Int
+  nameOverride String?
+  bestOf       Int     @default(1)
+  matches      Match[]
+
+  @@unique([groupId, number])
+}
+
+model Match {
+  id        String      @id @default(cuid())
+  roundId   String
+  round     Round       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  number    Int
+  status    MatchStatus @default(PENDING)
+  opponent1 Json?
+  opponent2 Json?
+  games     MatchGame[]
+
+  @@unique([roundId, number])
+}
+
+model MatchGame {
+  id      String @id @default(cuid())
+  matchId String
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  number  Int
+  scores  Json   @default("{}")
+
+  @@unique([matchId, number])
+}
+
+// Teilnehmer sind vorerst ad-hoc pro Turnier. Für Ligen/Cross-Turnier-Stats
+// käme später eine separate ParticipantIdentity dazu.
+model Participant {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  name         String
+  seed         Int?
+
+  @@index([tournamentId])
+}
+
+model CapabilityLink {
+  id           String         @id @default(cuid())
+  tournamentId String
+  tournament   Tournament     @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  type         CapabilityType
+  token        String         @unique
+  expiresAt    DateTime?
+  createdAt    DateTime       @default(now())
+
+  @@index([tournamentId])
+}
+
+model SavedTheme {
+  id          String   @id @default(cuid())
+  ownerUserId String
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String
+  tokens      Json     @default("{}")
+  createdAt   DateTime @default(now())
+}

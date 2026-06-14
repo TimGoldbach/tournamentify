@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * App design tokens. The bracket renderer reads its own --bracket-* tokens from
+ * here too, so token-based themes restyle the bracket without any raw CSS.
+ */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --muted-foreground: 215 16% 47%;
+
+  --bracket-node-bg: 0 0% 100%;
+  --bracket-connector: 215 16% 70%;
+  --bracket-radius: 0.5rem;
+}
+
+.dark {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --muted-foreground: 215 20% 65%;
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
