@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.next/
+out/
+.turbo/
+coverage/
+*.log
+
+# env files (keep .env.example tracked)
+.env
+.env.local
+.env.*.local
+apps/*/.env
+
+# prisma
+apps/api/prisma/*.db
+
+.DS_Store

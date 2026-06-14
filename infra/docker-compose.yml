@@ -1,0 +1,58 @@
+# Single-VPS deployment. Only Caddy is published to the host; web + api live on
+# the private compose network. The BFF (web) reaches Nest at http://api:3001.
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tournamentify
+      POSTGRES_PASSWORD: tournamentify
+      POSTGRES_DB: tournamentify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tournamentify"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/api.Dockerfile
+    restart: unless-stopped
+    env_file: ../apps/api/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "3001" # private network only — not published to the host
+
+  web:
+    build:
+      context: ..
+      dockerfile: infra/web.Dockerfile
+    restart: unless-stopped
+    env_file: ../apps/web/.env
+    depends_on:
+      - api
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
