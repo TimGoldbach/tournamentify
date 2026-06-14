@@ -98,15 +98,32 @@ SavedTheme(id, ownerUserId, name, tokens:jsonb)
 
 - **M0 — Fundament:** Monorepo (pnpm+Turborepo), `packages/shared` Zod, Nest+Prisma+Postgres,
   Next+Auth.js+BFF-Verdrahtung, Docker Compose + Caddy, next-intl (DE+EN), pino. *(dieses Gerüst)*
-- **M1 — Plattform/Accounts:** Auth + Claim-Gerüst, `User`+`tier`, komplettes Schema+Migrations,
-  **minimale** Turnier-Erzeugung aus Single/Double-Elim-Template (Engine), Dashboard + History,
-  **JSON Setup Import/Export** (round-trip getestet), Capability-Link-Datenschicht.
+- **M1 — Plattform/Accounts ✅ umgesetzt:** Auth.js (Google + Dev-Credentials) + BFF-Actor-Bridge,
+  Gast→User-Claim, `User`+`tier`, Tournament-CRUD, **eigener** Bracket-Generator
+  (Single-Elim + Round-Robin korrekt; Double-Elim/Swiss als 501 bis M2/M3),
+  Dashboard + History, **JSON-Setup-Import/Export**, Capability-Link-Datenschicht.
 - **M2 — Editor & Live:** Custom-SVG + dnd-kit Editor (Seeding, Scores, Custom-Edits),
   Token-Theme-Editor + Presets, **SSE** live, Share-/Score-Link-UX, Gast→Account-Claim-Flow.
 - **M3 — Format-Breite:** Round-Robin + Standings, Gruppen+KO (2 Stages),
   dann **Swiss** + Tiebreaker (stark getestet).
 - **M4 — Extras:** Embed-Widget + PNG/PDF-Export; Serien/Ligen (+ optional Participant-Registry);
   reichere Stats.
+
+## M1 — Bekannte Follow-ups (aus dem adversarialen Review)
+
+Bewusst auf M2+ verschoben (kein M1-Blocker):
+- **Capability-Links:** Default-Expiry setzen und VIEW/SCORE beim Projizieren der Detaildaten
+  unterscheiden (aktuell gibt jeder gültige Token die volle Detail-Ansicht). Sharing-UI = M2.
+- **Frontend-Client für Links:** `createCapabilityLink`/`listCapabilityLinks` in `api.ts` ergänzen
+  (zusammen mit der Sharing-UI).
+- **Response-Validierung:** Optionales `*.parse()` der Antworten gegen die Shared-DTOs, damit
+  künftige Enum-/Casing-Drift laut statt still bricht.
+- **BFF-Redirects:** `Location`-Header bei 3xx umschreiben/strippen (aktuell `redirect: "manual"`).
+
+⚠️ **Vor dem ersten Start (online) nötig:** `pnpm install`, dann
+`pnpm --filter @tournamentify/api prisma:migrate` (erste Migration — offline nicht erzeugbar),
+danach `pnpm build && pnpm typecheck` zur Verifikation. Besonders prüfen: Generator-Ausgabe,
+Auth.js-v5-Flow und der BFF-SSE-Stream.
 
 ## Tech-Stack (Kurzreferenz)
 

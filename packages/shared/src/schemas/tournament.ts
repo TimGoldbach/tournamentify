@@ -48,7 +48,7 @@ export const tournamentSetupSchema = z.object({
   schemaVersion: z.literal(SETUP_SCHEMA_VERSION),
   name: z.string().min(1),
   stages: z.array(stageSetupSchema).min(1),
-  participants: z.array(participantSetupSchema),
+  participants: z.array(participantSetupSchema).min(2, "Mindestens 2 Teilnehmer erforderlich"),
   design: designTokensSchema.optional(),
 });
 export type TournamentSetup = z.infer<typeof tournamentSetupSchema>;

@@ -1,6 +1,68 @@
 {
   "home": {
     "title": "Tournamentify",
-    "subtitle": "Bau deinen eigenen Turnierbaum – schnell und ganz nach deinen Vorstellungen."
+    "subtitle": "Bau deinen eigenen Turnierbaum – schnell und ganz nach deinen Vorstellungen.",
+    "ctaCreate": "Turnier erstellen",
+    "ctaDashboard": "Meine Turniere"
+  },
+  "dashboard": {
+    "title": "Meine Turniere",
+    "create": "Neues Turnier",
+    "loading": "Turniere werden geladen …",
+    "loadError": "Turniere konnten nicht geladen werden",
+    "emptyTitle": "Du hast noch keine Turniere erstellt.",
+    "emptyCta": "Erstelle dein erstes Turnier",
+    "participants": "Teilnehmer",
+    "format": "Format",
+    "updated": "Aktualisiert",
+    "status": {
+      "DRAFT": "Entwurf",
+      "RUNNING": "Läuft",
+      "COMPLETED": "Abgeschlossen"
+    },
+    "formatSingleElimination": "Single Elimination",
+    "formatDoubleElimination": "Double Elimination",
+    "formatRoundRobin": "Round Robin",
+    "formatSwiss": "Schweizer System"
+  },
+  "create": {
+    "title": "Neues Turnier",
+    "subtitle": "Lege Name, Format und Teilnehmer fest.",
+    "nameLabel": "Name",
+    "namePlaceholder": "z. B. Sommer-Cup 2026",
+    "formatLabel": "Format",
+    "formatHelp": "Double Elimination und Schweizer System folgen in M2/M3.",
+    "participantsLabel": "Teilnehmer",
+    "participantsPlaceholder": "Ein Name pro Zeile",
+    "participantsHelp": "Ein Name pro Zeile. Die Reihenfolge bestimmt die Setzliste.",
+    "submit": "Turnier erstellen",
+    "submitting": "Wird erstellt …",
+    "submitError": "Turnier konnte nicht erstellt werden",
+    "formatSingleElimination": "Single Elimination",
+    "formatDoubleElimination": "Double Elimination",
+    "formatRoundRobin": "Round Robin",
+    "formatSwiss": "Schweizer System"
+  },
+  "detail": {
+    "loading": "Turnier wird geladen …",
+    "loadError": "Turnier konnte nicht geladen werden",
+    "tbd": "Offen",
+    "group": "Gruppe {number}",
+    "export": "Exportieren",
+    "exportError": "Export fehlgeschlagen",
+    "delete": "Löschen",
+    "deleting": "Wird gelöscht …",
+    "deleteConfirm": "Dieses Turnier wirklich löschen?",
+    "deleteError": "Turnier konnte nicht gelöscht werden",
+    "editorComingSoon": "Der visuelle Bracket-Editor kommt in M2.",
+    "status": {
+      "DRAFT": "Entwurf",
+      "RUNNING": "Läuft",
+      "COMPLETED": "Abgeschlossen"
+    },
+    "formatSingleElimination": "Single Elimination",
+    "formatDoubleElimination": "Double Elimination",
+    "formatRoundRobin": "Round Robin",
+    "formatSwiss": "Schweizer System"
   }
 }
