@@ -21,6 +21,7 @@ import {
   AdvancementUpdate,
   MatchView,
   byeAdvancements,
+  loserAdvancement,
   parseSlot,
   winnerAdvancement,
 } from "../bracket/progression";
@@ -436,6 +437,23 @@ export class TournamentsService {
           },
         );
         await this.applyAdvancements(tx, updates);
+
+        // Double-elimination also drops the loser into the loser bracket. The
+        // loser is whichever resolved opponent did not win. For single
+        // elimination there are no loser_of consumers, so this is a no-op.
+        const loserParticipantId =
+          winnerParticipantId === slot1.participantId
+            ? slot2.participantId
+            : slot1.participantId;
+        const loserUpdates = loserAdvancement(
+          { matches: views },
+          {
+            roundNumber: match.round.number,
+            matchNumber: match.number,
+            loserParticipantId,
+          },
+        );
+        await this.applyAdvancements(tx, loserUpdates);
       }
 
       await this.recomputeStatus(tx, tournamentId);
