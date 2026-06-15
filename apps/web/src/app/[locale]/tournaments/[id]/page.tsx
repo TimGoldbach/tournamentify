@@ -2,81 +2,105 @@
 
 import { useTranslations, useLocale } from "next-intl";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
-import type { MatchDto, MatchSlotDto, StageDto } from "@tournamentify/shared";
+import { useEffect, useState } from "react";
+import type { DesignTokens, MatchDto } from "@tournamentify/shared";
 import * as api from "@/lib/api";
-import { useDeleteTournament, useTournament } from "@/lib/queries";
-import { Button, Card } from "@/components/ui";
+import { useDeleteTournament, useScoreMatch, useTournament, useUpdateDesign } from "@/lib/queries";
+import { useTournamentEvents } from "@/lib/useTournamentEvents";
+import { ScoreableMatch } from "@/components/ScoreableMatch";
+import { RoundRobinMatches } from "@/components/RoundRobinMatches";
+import SharePanel from "@/components/SharePanel";
+import { StageView } from "@/components/bracket/StageView";
+import { designToStyle, PRESETS } from "@/components/bracket/design";
+import { Button, Card, Input, Label } from "@/components/ui";
 
-const stageTypeLabelKey: Record<string, string> = {
-  single_elimination: "formatSingleElimination",
-  double_elimination: "formatDoubleElimination",
-  round_robin: "formatRoundRobin",
-  swiss: "formatSwiss",
-};
+const PRESET_NAMES = Object.keys(PRESETS);
 
-function slotLabel(slot: MatchSlotDto | null, fallback: string): string {
-  if (!slot) return fallback;
-  return slot.label;
-}
-
-function MatchCard({ match }: { match: MatchDto }) {
+/** Owner theme controls: preset picker + the three overridable tokens. */
+function ThemeBar({
+  value,
+  onChange,
+  onSave,
+  saving,
+}: {
+  value: DesignTokens;
+  onChange: (next: DesignTokens) => void;
+  onSave: () => void;
+  saving: boolean;
+}) {
   const t = useTranslations("detail");
+
+  function applyPreset(presetName: string) {
+    const preset = PRESETS[presetName];
+    if (!preset) {
+      onChange({ ...value, preset: undefined });
+      return;
+    }
+    onChange({ ...preset });
+  }
+
   return (
-    <Card className="w-56 p-3">
-      <div className="space-y-1 text-sm">
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate">{slotLabel(match.opponent1, t("tbd"))}</span>
-          <span className="tabular-nums text-muted-foreground">
-            {match.opponent1?.score ?? ""}
-          </span>
-        </div>
-        <div className="h-px bg-black/10 dark:bg-white/10" />
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate">{slotLabel(match.opponent2, t("tbd"))}</span>
-          <span className="tabular-nums text-muted-foreground">
-            {match.opponent2?.score ?? ""}
-          </span>
-        </div>
+    <Card className="mt-4 flex flex-wrap items-end gap-3">
+      <div>
+        <Label htmlFor="theme-preset">{t("themePreset")}</Label>
+        <select
+          id="theme-preset"
+          className="w-full rounded-md border border-black/15 bg-background px-3 py-2 text-sm text-foreground dark:border-white/20"
+          value={value.preset ?? ""}
+          onChange={(event) => applyPreset(event.target.value)}
+        >
+          <option value="">{t("themeCustom")}</option>
+          {PRESET_NAMES.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
       </div>
+
+      <div>
+        <Label htmlFor="theme-node-bg">{t("themeNodeBg")}</Label>
+        <Input
+          id="theme-node-bg"
+          className="w-32"
+          value={value.nodeBg ?? ""}
+          placeholder="#ffffff"
+          onChange={(event) =>
+            onChange({ ...value, nodeBg: event.target.value || undefined, preset: undefined })
+          }
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="theme-connector">{t("themeConnector")}</Label>
+        <Input
+          id="theme-connector"
+          className="w-32"
+          value={value.connector ?? ""}
+          placeholder="#cccccc"
+          onChange={(event) =>
+            onChange({ ...value, connector: event.target.value || undefined, preset: undefined })
+          }
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="theme-radius">{t("themeRadius")}</Label>
+        <Input
+          id="theme-radius"
+          className="w-24"
+          value={value.radius ?? ""}
+          placeholder="8px"
+          onChange={(event) =>
+            onChange({ ...value, radius: event.target.value || undefined, preset: undefined })
+          }
+        />
+      </div>
+
+      <Button className="ml-auto" onClick={onSave} disabled={saving}>
+        {saving ? t("themeSaving") : t("themeSave")}
+      </Button>
     </Card>
-  );
-}
-
-function StageView({ stage }: { stage: StageDto }) {
-  const t = useTranslations("detail");
-  return (
-    <section className="mt-6">
-      <h2 className="text-lg font-semibold">
-        {stage.name}
-        <span className="ml-2 text-sm font-normal text-muted-foreground">
-          {t(stageTypeLabelKey[stage.type] ?? stage.type)}
-        </span>
-      </h2>
-
-      {stage.groups.map((group) => (
-        <div key={group.id} className="mt-4">
-          {stage.groups.length > 1 ? (
-            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-              {t("group", { number: group.number })}
-            </h3>
-          ) : null}
-
-          <div className="flex gap-6 overflow-x-auto pb-2">
-            {group.rounds.map((round) => (
-              <div key={round.id} className="flex flex-col gap-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {round.name}
-                </h4>
-                {round.matches.map((match) => (
-                  <MatchCard key={match.id} match={match} />
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </section>
   );
 }
 
@@ -89,7 +113,21 @@ function DetailContent() {
 
   const { data, isLoading, isError, error } = useTournament(id);
   const deleteTournament = useDeleteTournament();
+  const scoreMutation = useScoreMatch(id);
+  const updateDesign = useUpdateDesign(id);
+
   const [exportError, setExportError] = useState<string | null>(null);
+  const [localDesign, setLocalDesign] = useState<DesignTokens>({});
+
+  // Live refresh: owner relies on the BFF session cookie (no token needed).
+  useTournamentEvents(id, undefined, true);
+
+  // Keep the live-preview design in sync with the persisted tokens.
+  useEffect(() => {
+    if (data?.design) {
+      setLocalDesign(data.design);
+    }
+  }, [data?.design]);
 
   async function onExport() {
     setExportError(null);
@@ -138,6 +176,17 @@ function DetailContent() {
     );
   }
 
+  const renderMatch = (match: MatchDto) => (
+    <ScoreableMatch
+      match={match}
+      canScore={data.viewerCanScore}
+      pending={scoreMutation.isPending}
+      onScore={(matchId, opponent1Score, opponent2Score) =>
+        scoreMutation.mutate({ matchId, input: { opponent1Score, opponent2Score } })
+      }
+    />
+  );
+
   return (
     <main className="mx-auto max-w-5xl p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -165,14 +214,36 @@ function DetailContent() {
             : t("deleteError")}
         </p>
       ) : null}
+      {scoreMutation.isError ? (
+        <p className="mt-3 text-sm text-red-600">
+          {scoreMutation.error instanceof Error ? scoreMutation.error.message : t("scoreError")}
+        </p>
+      ) : null}
 
-      <p className="mt-4 rounded-md border border-black/10 bg-black/5 p-3 text-sm text-muted-foreground dark:border-white/10 dark:bg-white/5">
-        {t("editorComingSoon")}
-      </p>
+      <ThemeBar
+        value={localDesign}
+        onChange={setLocalDesign}
+        onSave={() => updateDesign.mutate(localDesign)}
+        saving={updateDesign.isPending}
+      />
+      {updateDesign.isError ? (
+        <p className="mt-2 text-sm text-red-600">
+          {updateDesign.error instanceof Error ? updateDesign.error.message : t("themeError")}
+        </p>
+      ) : null}
 
-      {data.stages.map((stage) => (
-        <StageView key={stage.id} stage={stage} />
-      ))}
+      <SharePanel id={id} />
+
+      <div style={designToStyle(localDesign)}>
+        {data.stages.map((stage) => (
+          <div key={stage.id}>
+            <StageView stage={stage} renderMatch={renderMatch} />
+            {stage.type === "round_robin" ? (
+              <RoundRobinMatches stage={stage} renderMatch={renderMatch} />
+            ) : null}
+          </div>
+        ))}
+      </div>
     </main>
   );
 }

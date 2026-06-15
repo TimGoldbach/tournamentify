@@ -71,8 +71,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.userId;
-        session.user.tier = token.tier;
+        if (typeof token.userId === "string") {
+          session.user.id = token.userId;
+        }
+        if (typeof token.tier === "string") {
+          session.user.tier = token.tier;
+        }
       }
       return session;
     },
@@ -85,12 +89,5 @@ declare module "next-auth" {
       id?: string;
       tier?: string;
     } & DefaultSession["user"];
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    userId?: string;
-    tier?: string;
   }
 }

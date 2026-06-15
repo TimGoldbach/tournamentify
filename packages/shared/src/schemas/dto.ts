@@ -30,6 +30,22 @@ export const createCapabilityLinkInputSchema = z.object({
 });
 export type CreateCapabilityLinkInput = z.infer<typeof createCapabilityLinkInputSchema>;
 
+export const scoreInputSchema = z.object({
+  opponent1Score: z.number().int().nonnegative(),
+  opponent2Score: z.number().int().nonnegative(),
+});
+export type ScoreInput = z.infer<typeof scoreInputSchema>;
+
+/** Body of PATCH /tournaments/:id/design — the token set to persist. */
+export const updateDesignInputSchema = designTokensSchema;
+export type UpdateDesignInput = z.infer<typeof updateDesignInputSchema>;
+
+/** SSE payload: a change signal — clients refetch the detail on receipt. */
+export const matchUpdateEventSchema = z.object({
+  tournamentId: z.string(),
+});
+export type MatchUpdateEvent = z.infer<typeof matchUpdateEventSchema>;
+
 // ---------------------------------------------------------------------------
 // Read-models (DTOs returned by the API)
 // ---------------------------------------------------------------------------
@@ -86,10 +102,23 @@ export const roundDtoSchema = z.object({
 });
 export type RoundDto = z.infer<typeof roundDtoSchema>;
 
+export const standingsRowDtoSchema = z.object({
+  participantId: z.string(),
+  name: z.string(),
+  played: z.number().int().nonnegative(),
+  wins: z.number().int().nonnegative(),
+  draws: z.number().int().nonnegative(),
+  losses: z.number().int().nonnegative(),
+  points: z.number().int(),
+});
+export type StandingsRowDto = z.infer<typeof standingsRowDtoSchema>;
+
 export const groupDtoSchema = z.object({
   id: z.string(),
   number: z.number().int(),
   rounds: z.array(roundDtoSchema),
+  /** Populated for round-robin groups; null for elimination groups. */
+  standings: z.array(standingsRowDtoSchema).nullable(),
 });
 export type GroupDto = z.infer<typeof groupDtoSchema>;
 
@@ -116,6 +145,8 @@ export const tournamentDetailDtoSchema = z.object({
   design: designTokensSchema.nullable(),
   participants: z.array(participantDtoSchema),
   stages: z.array(stageDtoSchema),
+  /** Whether the current requester (owner or SCORE-link holder) may enter scores. */
+  viewerCanScore: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

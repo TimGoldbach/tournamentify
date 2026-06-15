@@ -54,7 +54,21 @@
     "deleting": "Wird gelöscht …",
     "deleteConfirm": "Dieses Turnier wirklich löschen?",
     "deleteError": "Turnier konnte nicht gelöscht werden",
-    "editorComingSoon": "Der visuelle Bracket-Editor kommt in M2.",
+    "matches": "Spiele",
+    "scoreOpponent1": "Ergebnis für Gegner 1",
+    "scoreOpponent2": "Ergebnis für Gegner 2",
+    "scoreSave": "Speichern",
+    "scoreUpdate": "Aktualisieren",
+    "scoreSaving": "Wird gespeichert …",
+    "scoreError": "Ergebnis konnte nicht gespeichert werden",
+    "themePreset": "Design",
+    "themeCustom": "Eigenes",
+    "themeNodeBg": "Knotenfarbe",
+    "themeConnector": "Verbindung",
+    "themeRadius": "Eckenradius",
+    "themeSave": "Design speichern",
+    "themeSaving": "Wird gespeichert …",
+    "themeError": "Design konnte nicht gespeichert werden",
     "status": {
       "DRAFT": "Entwurf",
       "RUNNING": "Läuft",
@@ -64,5 +78,29 @@
     "formatDoubleElimination": "Double Elimination",
     "formatRoundRobin": "Round Robin",
     "formatSwiss": "Schweizer System"
+  },
+  "share": {
+    "title": "Teilen",
+    "description": "Erstelle Links, damit andere den Turnierbaum ansehen oder Ergebnisse eintragen können.",
+    "createView": "Ansichts-Link erstellen",
+    "createScore": "Ergebnis-Link erstellen",
+    "createError": "Link konnte nicht erstellt werden",
+    "loading": "Links werden geladen …",
+    "loadError": "Links konnten nicht geladen werden",
+    "empty": "Noch keine Links. Erstelle einen, um dieses Turnier zu teilen.",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "copyError": "Kopieren fehlgeschlagen",
+    "type": {
+      "VIEW": "Ansicht",
+      "SCORE": "Ergebnis"
+    }
+  },
+  "publicView": {
+    "loading": "Turnier wird geladen …",
+    "loadError": "Turnier konnte nicht geladen werden",
+    "notFound": "Dieser Link ist ungültig oder abgelaufen.",
+    "scoringEnabled": "Ergebniseingabe aktiv",
+    "liveView": "Live-Ansicht"
   }
 }

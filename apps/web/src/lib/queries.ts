@@ -1,7 +1,12 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CreateTournamentInput, TournamentDetailDto } from "@tournamentify/shared";
+import type {
+  CreateTournamentInput,
+  ScoreInput,
+  TournamentDetailDto,
+  UpdateDesignInput,
+} from "@tournamentify/shared";
 import * as api from "./api";
 
 /**
@@ -16,6 +21,11 @@ export const tournamentKeys = {
   detail: (id: string) => [...tournamentKeys.all, "detail", id] as const,
 };
 
+/** The detail query key, including the optional capability token. Shared by
+ * useTournament, useScoreMatch and the SSE hook so they never drift apart. */
+export const detailKey = (id: string, token?: string) =>
+  token ? [...tournamentKeys.detail(id), token] : tournamentKeys.detail(id);
+
 export function useTournaments() {
   return useQuery({
     queryKey: tournamentKeys.list(),
@@ -25,7 +35,7 @@ export function useTournaments() {
 
 export function useTournament(id: string, token?: string) {
   return useQuery({
-    queryKey: token ? [...tournamentKeys.detail(id), token] : tournamentKeys.detail(id),
+    queryKey: detailKey(id, token),
     queryFn: () => api.getTournament(id, token),
     enabled: Boolean(id),
   });
@@ -49,6 +59,51 @@ export function useDeleteTournament() {
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: tournamentKeys.list() });
       queryClient.removeQueries({ queryKey: tournamentKeys.detail(id) });
+    },
+  });
+}
+
+export function useScoreMatch(id: string, token?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { matchId: string; input: ScoreInput }) =>
+      api.scoreMatch(id, vars.matchId, vars.input, token),
+    onSuccess: (detail: TournamentDetailDto) => {
+      queryClient.setQueryData(detailKey(id, token), detail);
+    },
+  });
+}
+
+export function useUpdateDesign(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (design: UpdateDesignInput) => api.updateDesign(id, design),
+    onSuccess: (detail: TournamentDetailDto) => {
+      queryClient.setQueryData(tournamentKeys.detail(id), detail);
+    },
+  });
+}
+
+export const linkKeys = {
+  // Outside the detail subtree so SSE-driven detail invalidations don't cascade
+  // into an unnecessary links refetch.
+  list: (id: string) => ["tournament-links", id] as const,
+};
+
+export function useCapabilityLinks(id: string, enabled = true) {
+  return useQuery({
+    queryKey: linkKeys.list(id),
+    queryFn: () => api.listCapabilityLinks(id),
+    enabled: Boolean(id) && enabled,
+  });
+}
+
+export function useCreateCapabilityLink(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (type: "VIEW" | "SCORE") => api.createCapabilityLink(id, type),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: linkKeys.list(id) });
     },
   });
 }

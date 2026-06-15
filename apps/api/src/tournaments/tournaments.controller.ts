@@ -6,28 +6,41 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
+  Sse,
   UsePipes,
 } from "@nestjs/common";
 import {
   CapabilityLinkDto,
   CreateCapabilityLinkInput,
   CreateTournamentInput,
+  MatchUpdateEvent,
+  ScoreInput,
   TournamentDetailDto,
   TournamentSetup,
   TournamentSummaryDto,
+  UpdateDesignInput,
   createCapabilityLinkInputSchema,
   createTournamentInputSchema,
   importSetupInputSchema,
+  scoreInputSchema,
+  updateDesignInputSchema,
 } from "@tournamentify/shared";
+import { Observable, from } from "rxjs";
+import { switchMap } from "rxjs/operators";
 import { Actor, CurrentActor } from "../common/current-actor.decorator";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
+import { EventsService } from "./events.service";
 import { TournamentsService } from "./tournaments.service";
 
 @Controller("tournaments")
 export class TournamentsController {
-  constructor(private readonly tournaments: TournamentsService) {}
+  constructor(
+    private readonly tournaments: TournamentsService,
+    private readonly events: EventsService,
+  ) {}
 
   @Post()
   @UsePipes(new ZodValidationPipe(createTournamentInputSchema))
@@ -100,5 +113,37 @@ export class TournamentsController {
   @Get(":id/links")
   listLinks(@Param("id") id: string, @CurrentActor() actor: Actor): Promise<CapabilityLinkDto[]> {
     return this.tournaments.listLinks(id, actor);
+  }
+
+  @Post(":id/matches/:matchId/score")
+  score(
+    @Param("id") id: string,
+    @Param("matchId") matchId: string,
+    @CurrentActor() actor: Actor,
+    @Body(new ZodValidationPipe(scoreInputSchema)) input: ScoreInput,
+    @Query("token") token?: string,
+  ): Promise<TournamentDetailDto> {
+    return this.tournaments.score(actor, id, matchId, input, token);
+  }
+
+  @Patch(":id/design")
+  updateDesign(
+    @Param("id") id: string,
+    @CurrentActor() actor: Actor,
+    @Body(new ZodValidationPipe(updateDesignInputSchema)) tokens: UpdateDesignInput,
+  ): Promise<TournamentDetailDto> {
+    return this.tournaments.updateDesign(actor, id, tokens);
+  }
+
+  @Sse(":id/events")
+  streamEvents(
+    @Param("id") id: string,
+    @CurrentActor() actor: Actor,
+    @Query("token") token?: string,
+  ): Observable<{ data: MatchUpdateEvent }> {
+    // Authorize first, then hand the connection over to this tournament's stream.
+    return from(this.tournaments.assertCanView(id, actor, token)).pipe(
+      switchMap(() => this.events.stream(id)),
+    );
   }
 }

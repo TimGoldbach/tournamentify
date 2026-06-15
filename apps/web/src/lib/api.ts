@@ -1,8 +1,11 @@
 import type {
+  CapabilityLinkDto,
   CreateTournamentInput,
+  ScoreInput,
   TournamentDetailDto,
   TournamentSetup,
   TournamentSummaryDto,
+  UpdateDesignInput,
 } from "@tournamentify/shared";
 
 /**
@@ -66,6 +69,45 @@ export function importSetup(setup: TournamentSetup): Promise<TournamentDetailDto
     method: "POST",
     body: JSON.stringify(setup),
   });
+}
+
+export function scoreMatch(
+  tournamentId: string,
+  matchId: string,
+  input: ScoreInput,
+  token?: string,
+): Promise<TournamentDetailDto> {
+  const query = token ? `?token=${encodeURIComponent(token)}` : "";
+  return request<TournamentDetailDto>(
+    `${BFF}/tournaments/${encodeURIComponent(tournamentId)}/matches/${encodeURIComponent(
+      matchId,
+    )}/score${query}`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function updateDesign(id: string, design: UpdateDesignInput): Promise<TournamentDetailDto> {
+  return request<TournamentDetailDto>(`${BFF}/tournaments/${encodeURIComponent(id)}/design`, {
+    method: "PATCH",
+    body: JSON.stringify(design),
+  });
+}
+
+export function createCapabilityLink(id: string, type: "VIEW" | "SCORE"): Promise<CapabilityLinkDto> {
+  return request<CapabilityLinkDto>(`${BFF}/tournaments/${encodeURIComponent(id)}/links`, {
+    method: "POST",
+    body: JSON.stringify({ type }),
+  });
+}
+
+export function listCapabilityLinks(id: string): Promise<CapabilityLinkDto[]> {
+  return request<CapabilityLinkDto[]>(`${BFF}/tournaments/${encodeURIComponent(id)}/links`);
+}
+
+/** URL for an EventSource (SSE) subscription — used with `new EventSource(...)`, not fetch. */
+export function eventsUrl(id: string, token?: string): string {
+  const query = token ? `?token=${encodeURIComponent(token)}` : "";
+  return `${BFF}/tournaments/${encodeURIComponent(id)}/events${query}`;
 }
 
 /**
