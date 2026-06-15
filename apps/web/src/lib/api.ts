@@ -1,6 +1,8 @@
 import type {
   CapabilityLinkDto,
+  CreateSavedThemeInput,
   CreateTournamentInput,
+  SavedThemeDto,
   ScoreInput,
   TournamentDetailDto,
   TournamentSetup,
@@ -93,15 +95,49 @@ export function updateDesign(id: string, design: UpdateDesignInput): Promise<Tou
   });
 }
 
-export function createCapabilityLink(id: string, type: "VIEW" | "SCORE"): Promise<CapabilityLinkDto> {
+export function createCapabilityLink(
+  id: string,
+  type: "VIEW" | "SCORE",
+  expiresInHours?: number,
+): Promise<CapabilityLinkDto> {
   return request<CapabilityLinkDto>(`${BFF}/tournaments/${encodeURIComponent(id)}/links`, {
     method: "POST",
-    body: JSON.stringify({ type }),
+    body: JSON.stringify({ type, expiresInHours }),
   });
 }
 
 export function listCapabilityLinks(id: string): Promise<CapabilityLinkDto[]> {
   return request<CapabilityLinkDto[]>(`${BFF}/tournaments/${encodeURIComponent(id)}/links`);
+}
+
+export function revokeCapabilityLink(id: string, linkId: string): Promise<void> {
+  return request<void>(
+    `${BFF}/tournaments/${encodeURIComponent(id)}/links/${encodeURIComponent(linkId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function reseed(id: string, participantIds: string[]): Promise<TournamentDetailDto> {
+  return request<TournamentDetailDto>(`${BFF}/tournaments/${encodeURIComponent(id)}/seeding`, {
+    method: "PUT",
+    body: JSON.stringify({ participantIds }),
+  });
+}
+
+// Saved themes (account feature) — user-scoped, not tied to a tournament.
+export function listSavedThemes(): Promise<SavedThemeDto[]> {
+  return request<SavedThemeDto[]>(`${BFF}/themes`);
+}
+
+export function createSavedTheme(input: CreateSavedThemeInput): Promise<SavedThemeDto> {
+  return request<SavedThemeDto>(`${BFF}/themes`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteSavedTheme(themeId: string): Promise<void> {
+  return request<void>(`${BFF}/themes/${encodeURIComponent(themeId)}`, { method: "DELETE" });
 }
 
 /** URL for an EventSource (SSE) subscription — used with `new EventSource(...)`, not fetch. */

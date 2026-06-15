@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Sse,
   UsePipes,
@@ -17,6 +18,7 @@ import {
   CreateCapabilityLinkInput,
   CreateTournamentInput,
   MatchUpdateEvent,
+  ReseedInput,
   ScoreInput,
   TournamentDetailDto,
   TournamentSetup,
@@ -25,6 +27,7 @@ import {
   createCapabilityLinkInputSchema,
   createTournamentInputSchema,
   importSetupInputSchema,
+  reseedInputSchema,
   scoreInputSchema,
   updateDesignInputSchema,
 } from "@tournamentify/shared";
@@ -107,12 +110,31 @@ export class TournamentsController {
     @CurrentActor() actor: Actor,
     @Body(new ZodValidationPipe(createCapabilityLinkInputSchema)) body: CreateCapabilityLinkInput,
   ): Promise<CapabilityLinkDto> {
-    return this.tournaments.createLink(id, actor, body.type);
+    return this.tournaments.createLink(id, actor, body.type, body.expiresInHours);
   }
 
   @Get(":id/links")
   listLinks(@Param("id") id: string, @CurrentActor() actor: Actor): Promise<CapabilityLinkDto[]> {
     return this.tournaments.listLinks(id, actor);
+  }
+
+  @Delete(":id/links/:linkId")
+  @HttpCode(204)
+  revokeLink(
+    @Param("id") id: string,
+    @Param("linkId") linkId: string,
+    @CurrentActor() actor: Actor,
+  ): Promise<void> {
+    return this.tournaments.revokeLink(id, actor, linkId);
+  }
+
+  @Put(":id/seeding")
+  reseed(
+    @Param("id") id: string,
+    @CurrentActor() actor: Actor,
+    @Body(new ZodValidationPipe(reseedInputSchema)) body: ReseedInput,
+  ): Promise<TournamentDetailDto> {
+    return this.tournaments.reseed(actor, id, body.participantIds);
   }
 
   @Post(":id/matches/:matchId/score")

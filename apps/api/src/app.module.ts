@@ -4,6 +4,7 @@ import { LoggerModule } from "nestjs-pino";
 import { ServiceTokenGuard } from "./common/service-token.guard";
 import { HealthController } from "./health.controller";
 import { PrismaModule } from "./prisma/prisma.module";
+import { ThemesModule } from "./themes/themes.module";
 import { TournamentsModule } from "./tournaments/tournaments.module";
 import { UsersModule } from "./users/users.module";
 
@@ -29,6 +30,7 @@ import { UsersModule } from "./users/users.module";
     PrismaModule,
     UsersModule,
     TournamentsModule,
+    ThemesModule,
   ],
   controllers: [HealthController],
   providers: [

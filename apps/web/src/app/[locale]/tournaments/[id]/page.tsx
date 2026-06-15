@@ -11,98 +11,10 @@ import { ScoreableMatch } from "@/components/ScoreableMatch";
 import { RoundRobinMatches } from "@/components/RoundRobinMatches";
 import SharePanel from "@/components/SharePanel";
 import { StageView } from "@/components/bracket/StageView";
-import { designToStyle, PRESETS } from "@/components/bracket/design";
-import { Button, Card, Input, Label } from "@/components/ui";
-
-const PRESET_NAMES = Object.keys(PRESETS);
-
-/** Owner theme controls: preset picker + the three overridable tokens. */
-function ThemeBar({
-  value,
-  onChange,
-  onSave,
-  saving,
-}: {
-  value: DesignTokens;
-  onChange: (next: DesignTokens) => void;
-  onSave: () => void;
-  saving: boolean;
-}) {
-  const t = useTranslations("detail");
-
-  function applyPreset(presetName: string) {
-    const preset = PRESETS[presetName];
-    if (!preset) {
-      onChange({ ...value, preset: undefined });
-      return;
-    }
-    onChange({ ...preset });
-  }
-
-  return (
-    <Card className="mt-4 flex flex-wrap items-end gap-3">
-      <div>
-        <Label htmlFor="theme-preset">{t("themePreset")}</Label>
-        <select
-          id="theme-preset"
-          className="w-full rounded-md border border-black/15 bg-background px-3 py-2 text-sm text-foreground dark:border-white/20"
-          value={value.preset ?? ""}
-          onChange={(event) => applyPreset(event.target.value)}
-        >
-          <option value="">{t("themeCustom")}</option>
-          {PRESET_NAMES.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <Label htmlFor="theme-node-bg">{t("themeNodeBg")}</Label>
-        <Input
-          id="theme-node-bg"
-          className="w-32"
-          value={value.nodeBg ?? ""}
-          placeholder="#ffffff"
-          onChange={(event) =>
-            onChange({ ...value, nodeBg: event.target.value || undefined, preset: undefined })
-          }
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="theme-connector">{t("themeConnector")}</Label>
-        <Input
-          id="theme-connector"
-          className="w-32"
-          value={value.connector ?? ""}
-          placeholder="#cccccc"
-          onChange={(event) =>
-            onChange({ ...value, connector: event.target.value || undefined, preset: undefined })
-          }
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="theme-radius">{t("themeRadius")}</Label>
-        <Input
-          id="theme-radius"
-          className="w-24"
-          value={value.radius ?? ""}
-          placeholder="8px"
-          onChange={(event) =>
-            onChange({ ...value, radius: event.target.value || undefined, preset: undefined })
-          }
-        />
-      </div>
-
-      <Button className="ml-auto" onClick={onSave} disabled={saving}>
-        {saving ? t("themeSaving") : t("themeSave")}
-      </Button>
-    </Card>
-  );
-}
+import { designToStyle } from "@/components/bracket/design";
+import { Button } from "@/components/ui";
+import { ThemeEditor } from "@/components/ThemeEditor";
+import { SeedingEditor } from "@/components/SeedingEditor";
 
 function DetailContent() {
   const t = useTranslations("detail");
@@ -176,6 +88,19 @@ function DetailContent() {
     );
   }
 
+  // Seeding can only be reordered before any real result is entered. Auto-advanced
+  // byes are COMPLETED but carry no score, so we lock only on an actually played
+  // match (both opponents have a numeric score) — mirrors the backend lock.
+  const hasPlayedResult = data.stages.some((stage) =>
+    stage.groups.some((group) =>
+      group.rounds.some((round) =>
+        round.matches.some(
+          (match) => match.opponent1?.score != null && match.opponent2?.score != null,
+        ),
+      ),
+    ),
+  );
+
   const renderMatch = (match: MatchDto) => (
     <ScoreableMatch
       match={match}
@@ -220,7 +145,7 @@ function DetailContent() {
         </p>
       ) : null}
 
-      <ThemeBar
+      <ThemeEditor
         value={localDesign}
         onChange={setLocalDesign}
         onSave={() => updateDesign.mutate(localDesign)}
@@ -231,6 +156,8 @@ function DetailContent() {
           {updateDesign.error instanceof Error ? updateDesign.error.message : t("themeError")}
         </p>
       ) : null}
+
+      <SeedingEditor id={id} participants={data.participants} locked={hasPlayedResult} />
 
       <SharePanel id={id} />
 
