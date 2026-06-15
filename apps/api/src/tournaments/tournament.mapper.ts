@@ -12,9 +12,11 @@ import {
   MatchDto,
   MatchSlotDto,
   StageType,
+  StandingsRowDto,
   TournamentDetailDto,
   TournamentSummaryDto,
 } from "@tournamentify/shared";
+import { MatchView, computeStandings } from "../bracket/progression";
 import { toDomainStageType } from "../bracket/stage-type";
 
 /**
@@ -27,7 +29,7 @@ import { toDomainStageType } from "../bracket/stage-type";
 // ---------------------------------------------------------------------------
 
 type StoredSlot =
-  | { participantId: string }
+  | { participantId: string; score?: number }
   | { bye: true }
   | { source: { type: "winner_of" | "loser_of"; round: number; match: number } }
   | null;
@@ -51,7 +53,7 @@ function resolveSlot(raw: unknown, names: ParticipantNameLookup): MatchSlotDto |
     return {
       participantId: slot.participantId,
       label: names.get(slot.participantId) ?? "",
-      score: null,
+      score: typeof slot.score === "number" ? slot.score : null,
     };
   }
   if ("bye" in slot && slot.bye) {
@@ -99,7 +101,7 @@ export function toSummary(t: TournamentSummaryRow): TournamentSummaryDto {
   };
 }
 
-export function toDetail(t: TournamentDetailRow): TournamentDetailDto {
+export function toDetail(t: TournamentDetailRow, viewerCanScore: boolean): TournamentDetailDto {
   const names: ParticipantNameLookup = new Map(t.participants.map((p) => [p.id, p.name]));
   const parsedDesign = designTokensSchema.safeParse(t.designTokens);
 
@@ -113,25 +115,59 @@ export function toDetail(t: TournamentDetailRow): TournamentDetailDto {
       name: p.name,
       seed: p.seed ?? null,
     })),
-    stages: t.stages.map((stage) => ({
-      id: stage.id,
-      type: toDomainStageType(stage.type),
-      number: stage.number,
-      name: stageName(stage),
-      groups: stage.groups.map((group) => ({
-        id: group.id,
-        number: group.number,
-        rounds: group.rounds.map((round) => ({
-          id: round.id,
-          number: round.number,
-          name: round.nameOverride ?? `Runde ${round.number}`,
-          matches: round.matches.map((match) => toMatch(match, names)),
+    stages: t.stages.map((stage) => {
+      const stageType = toDomainStageType(stage.type);
+      return {
+        id: stage.id,
+        type: stageType,
+        number: stage.number,
+        name: stageName(stage),
+        groups: stage.groups.map((group) => ({
+          id: group.id,
+          number: group.number,
+          rounds: group.rounds.map((round) => ({
+            id: round.id,
+            number: round.number,
+            name: round.nameOverride ?? `Runde ${round.number}`,
+            matches: round.matches.map((match) => toMatch(match, names)),
+          })),
+          standings: groupStandings(stageType, group, names),
         })),
-      })),
-    })),
+      };
+    }),
+    viewerCanScore,
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString(),
   };
+}
+
+/** Round-robin groups carry a standings table; elimination groups carry null. */
+function groupStandings(
+  stageType: StageType,
+  group: GroupRow,
+  names: ParticipantNameLookup,
+): StandingsRowDto[] | null {
+  if (stageType !== "round_robin") {
+    return null;
+  }
+  return computeStandings({ matches: buildMatchViews(group) }, names);
+}
+
+/** Flatten a group's rounds/matches into the MatchView[] progression expects. */
+export function buildMatchViews(group: GroupRow): MatchView[] {
+  const views: MatchView[] = [];
+  for (const round of group.rounds) {
+    for (const match of round.matches) {
+      views.push({
+        id: match.id,
+        roundNumber: round.number,
+        matchNumber: match.number,
+        opponent1: match.opponent1,
+        opponent2: match.opponent2,
+      });
+    }
+  }
+  return views;
 }
 
 function toMatch(match: MatchRow, names: ParticipantNameLookup): MatchDto {

@@ -102,8 +102,10 @@ SavedTheme(id, ownerUserId, name, tokens:jsonb)
   Gast→User-Claim, `User`+`tier`, Tournament-CRUD, **eigener** Bracket-Generator
   (Single-Elim + Round-Robin korrekt; Double-Elim/Swiss als 501 bis M2/M3),
   Dashboard + History, **JSON-Setup-Import/Export**, Capability-Link-Datenschicht.
-- **M2 — Editor & Live:** Custom-SVG + dnd-kit Editor (Seeding, Scores, Custom-Edits),
-  Token-Theme-Editor + Presets, **SSE** live, Share-/Score-Link-UX, Gast→Account-Claim-Flow.
+- **M2 — Editor & Live ✅ umgesetzt (Kern):** Scoring + Single-Elim-Progression + Bye-Auto-Advance,
+  Round-Robin-Standings, **SSE-Live-Updates**, SVG-Bracket, Capability-Link-Sharing + öffentliche
+  Live-/Score-Route, Theme-Token-Anwendung + Presets/Controls. (Drag-Reseeding & voller Theme-Editor
+  mit gespeicherter Bibliothek → M2.1; double_elim-Progression → M3.)
 - **M3 — Format-Breite:** Round-Robin + Standings, Gruppen+KO (2 Stages),
   dann **Swiss** + Tiebreaker (stark getestet).
 - **M4 — Extras:** Embed-Widget + PNG/PDF-Export; Serien/Ligen (+ optional Participant-Registry);
@@ -124,6 +126,24 @@ Bewusst auf M2+ verschoben (kein M1-Blocker):
 `pnpm --filter @tournamentify/api prisma:migrate` (erste Migration — offline nicht erzeugbar),
 danach `pnpm build && pnpm typecheck` zur Verifikation. Besonders prüfen: Generator-Ausgabe,
 Auth.js-v5-Flow und der BFF-SSE-Stream.
+
+## M2 — Bekannte Follow-ups (aus dem adversarialen Review)
+
+Bewusst auf M2.1+ verschoben:
+- **Capability-Links:** Default-Expiry/TTL + Revoke-Endpoint (aktuell laufen Links nie ab); der
+  SSE-Token reist im Query-String — der Reverse-Proxy sollte `/events`-URLs nicht mit Query loggen.
+- **Voller Theme-Editor:** gespeicherte Theme-Bibliothek (`SavedTheme`-CRUD) + Farb-Picker statt
+  HSL-Textfeldern; aktuell Presets + drei Token-Felder, live angewendet & persistiert.
+- **Drag-Reseeding** des generierten Brackets (dnd-kit) — Seeding wird derzeit beim Erstellen über
+  die Eingabe-Reihenfolge gesetzt.
+- **Re-Scoring/Korrektur** abgeschlossener Matches inkl. Re-Compute der Folgerunden — derzeit
+  serverseitig abgelehnt (verhindert veraltete Sieger downstream).
+- **SSE-Skalierung:** `EventsService` ist prozess-lokal (eine Instanz). Multi-Replica braucht
+  Redis-Pub/Sub oder Postgres `LISTEN/NOTIFY`.
+
+⚠️ Vor dem Start (online), wie M1: `pnpm install`, `prisma migrate`, dann `pnpm build && pnpm typecheck`.
+Besonders laufzeit-prüfen: Progression/Bye-Advance, SSE durch den BFF (EventSource sendet keine Header),
+und das SVG-Bracket-Layout.
 
 ## Tech-Stack (Kurzreferenz)
 

@@ -6,8 +6,12 @@ import {
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { timingSafeEqual } from "crypto";
-import { Request } from "express";
 import { IS_PUBLIC_KEY } from "./public.decorator";
+
+/** Minimal request shape we read — avoids a direct dependency on express types. */
+interface HttpRequest {
+  headers: Record<string, string | string[] | undefined>;
+}
 
 /**
  * Nest is private behind the Next BFF. Every request must carry the shared
@@ -32,7 +36,7 @@ export class ServiceTokenGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    const request = context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest<HttpRequest>();
     const provided = request.headers["x-bff-service-token"];
     const token = Array.isArray(provided) ? provided[0] : provided;
 

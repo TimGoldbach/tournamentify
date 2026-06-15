@@ -54,7 +54,21 @@
     "deleting": "Deleting …",
     "deleteConfirm": "Really delete this tournament?",
     "deleteError": "Could not delete tournament",
-    "editorComingSoon": "The visual bracket editor arrives in M2.",
+    "matches": "Matches",
+    "scoreOpponent1": "Score for opponent 1",
+    "scoreOpponent2": "Score for opponent 2",
+    "scoreSave": "Save",
+    "scoreUpdate": "Update",
+    "scoreSaving": "Saving …",
+    "scoreError": "Could not save the score",
+    "themePreset": "Theme",
+    "themeCustom": "Custom",
+    "themeNodeBg": "Node colour",
+    "themeConnector": "Connector",
+    "themeRadius": "Corner radius",
+    "themeSave": "Save theme",
+    "themeSaving": "Saving …",
+    "themeError": "Could not save the theme",
     "status": {
       "DRAFT": "Draft",
       "RUNNING": "Running",
@@ -64,5 +78,29 @@
     "formatDoubleElimination": "Double elimination",
     "formatRoundRobin": "Round robin",
     "formatSwiss": "Swiss"
+  },
+  "share": {
+    "title": "Share",
+    "description": "Create links to let others view the bracket or enter scores.",
+    "createView": "Create view link",
+    "createScore": "Create score link",
+    "createError": "Could not create link",
+    "loading": "Loading links …",
+    "loadError": "Could not load links",
+    "empty": "No links yet. Create one to share this tournament.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyError": "Copy failed",
+    "type": {
+      "VIEW": "View",
+      "SCORE": "Score"
+    }
+  },
+  "publicView": {
+    "loading": "Loading tournament …",
+    "loadError": "Could not load tournament",
+    "notFound": "This link is invalid or has expired.",
+    "scoringEnabled": "Scoring enabled",
+    "liveView": "Live view"
   }
 }
