@@ -104,6 +104,14 @@ function isWinnerSourceFor(slot: Slot, round: number, match: number): boolean {
   return source.type === "winner_of" && source.round === round && source.match === match;
 }
 
+function isLoserSourceFor(slot: Slot, round: number, match: number): boolean {
+  if (slot === null || !("source" in slot)) {
+    return false;
+  }
+  const { source } = slot;
+  return source.type === "loser_of" && source.round === round && source.match === match;
+}
+
 // ---------------------------------------------------------------------------
 // Advancement
 // ---------------------------------------------------------------------------
@@ -136,6 +144,39 @@ export function winnerAdvancement(
         matchId: match.id,
         slot: "opponent2",
         participantId: completed.winnerParticipantId,
+      });
+    }
+  }
+  return updates;
+}
+
+/**
+ * The loser-bracket mirror of {@link winnerAdvancement}: given a just-completed
+ * match and the participant that lost it, find every downstream slot that
+ * sources from `loser_of(round, match)` and seat the loser there. Used by
+ * double-elimination to drop WB losers into the LB; single-elimination has no
+ * `loser_of` consumers, so this is a no-op there.
+ */
+export function loserAdvancement(
+  group: { matches: MatchView[] },
+  completed: { roundNumber: number; matchNumber: number; loserParticipantId: string },
+): AdvancementUpdate[] {
+  const updates: AdvancementUpdate[] = [];
+  for (const match of group.matches) {
+    const slot1 = parseSlot(match.opponent1);
+    if (isLoserSourceFor(slot1, completed.roundNumber, completed.matchNumber)) {
+      updates.push({
+        matchId: match.id,
+        slot: "opponent1",
+        participantId: completed.loserParticipantId,
+      });
+    }
+    const slot2 = parseSlot(match.opponent2);
+    if (isLoserSourceFor(slot2, completed.roundNumber, completed.matchNumber)) {
+      updates.push({
+        matchId: match.id,
+        slot: "opponent2",
+        participantId: completed.loserParticipantId,
       });
     }
   }

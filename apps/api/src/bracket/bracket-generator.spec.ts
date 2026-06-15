@@ -65,9 +65,146 @@ describe("round_robin (circle method)", () => {
   });
 });
 
+describe("double_elimination", () => {
+  const winnerSrc = (round: number, match: number): GeneratedSlot => ({
+    kind: "source",
+    source: { type: "winner_of", round, match },
+  });
+  const loserSrc = (round: number, match: number): GeneratedSlot => ({
+    kind: "source",
+    source: { type: "loser_of", round, match },
+  });
+  const participant = (participantIndex: number): GeneratedSlot => ({
+    kind: "participant",
+    participantIndex,
+  });
+
+  it("N=4 → exact oracle structure (6 = 2N-2 matches)", () => {
+    const group = gen.generateStage(stage("double_elimination"), 4).groups[0];
+
+    expect(group.rounds.map((r) => r.number)).toEqual([1, 2, 3, 4, 5]);
+    expect(group.rounds.map((r) => r.name)).toEqual([
+      "WB Runde 1",
+      "WB Finale",
+      "LB Runde 1",
+      "LB Finale",
+      "Grand Final",
+    ]);
+    expect(group.rounds.map((r) => r.matches.length)).toEqual([2, 1, 1, 1, 1]);
+
+    const [wb1, wbF, lb1, lbF, gf] = group.rounds;
+
+    // 1 WB Runde 1: m1 [participant 0, participant 3], m2 [participant 1, participant 2]
+    expect(wb1.matches[0].opponent1).toEqual(participant(0));
+    expect(wb1.matches[0].opponent2).toEqual(participant(3));
+    expect(wb1.matches[1].opponent1).toEqual(participant(1));
+    expect(wb1.matches[1].opponent2).toEqual(participant(2));
+
+    // 2 WB Finale: m1 [winner_of(1,1), winner_of(1,2)]
+    expect(wbF.matches[0].opponent1).toEqual(winnerSrc(1, 1));
+    expect(wbF.matches[0].opponent2).toEqual(winnerSrc(1, 2));
+
+    // 3 LB Runde 1: m1 [loser_of(1,1), loser_of(1,2)]
+    expect(lb1.matches[0].opponent1).toEqual(loserSrc(1, 1));
+    expect(lb1.matches[0].opponent2).toEqual(loserSrc(1, 2));
+
+    // 4 LB Finale: m1 [winner_of(3,1), loser_of(2,1)]
+    expect(lbF.matches[0].opponent1).toEqual(winnerSrc(3, 1));
+    expect(lbF.matches[0].opponent2).toEqual(loserSrc(2, 1));
+
+    // 5 Grand Final: m1 [winner_of(2,1), winner_of(4,1)]
+    expect(gf.matches[0].opponent1).toEqual(winnerSrc(2, 1));
+    expect(gf.matches[0].opponent2).toEqual(winnerSrc(4, 1));
+  });
+
+  it("N=8 → exact oracle structure (14 = 2N-2 matches)", () => {
+    const group = gen.generateStage(stage("double_elimination"), 8).groups[0];
+
+    expect(group.rounds.map((r) => r.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(group.rounds.map((r) => r.name)).toEqual([
+      "WB Runde 1",
+      "WB Runde 2",
+      "WB Finale",
+      "LB Runde 1",
+      "LB Runde 2",
+      "LB Runde 3",
+      "LB Finale",
+      "Grand Final",
+    ]);
+    expect(group.rounds.map((r) => r.matches.length)).toEqual([4, 2, 1, 2, 2, 1, 1, 1]);
+
+    const byNumber = (n: number) => group.rounds.find((r) => r.number === n)!;
+
+    // 1 WB Runde 1: seed order [1,8,4,5,2,7,3,6] → participantIndex [0,7,3,4,1,6,2,5]
+    const wb1 = byNumber(1);
+    expect(wb1.matches[0].opponent1).toEqual(participant(0));
+    expect(wb1.matches[0].opponent2).toEqual(participant(7));
+    expect(wb1.matches[1].opponent1).toEqual(participant(3));
+    expect(wb1.matches[1].opponent2).toEqual(participant(4));
+    expect(wb1.matches[2].opponent1).toEqual(participant(1));
+    expect(wb1.matches[2].opponent2).toEqual(participant(6));
+    expect(wb1.matches[3].opponent1).toEqual(participant(2));
+    expect(wb1.matches[3].opponent2).toEqual(participant(5));
+
+    // 2 WB Runde 2
+    const wb2 = byNumber(2);
+    expect(wb2.matches[0].opponent1).toEqual(winnerSrc(1, 1));
+    expect(wb2.matches[0].opponent2).toEqual(winnerSrc(1, 2));
+    expect(wb2.matches[1].opponent1).toEqual(winnerSrc(1, 3));
+    expect(wb2.matches[1].opponent2).toEqual(winnerSrc(1, 4));
+
+    // 3 WB Finale
+    const wbF = byNumber(3);
+    expect(wbF.matches[0].opponent1).toEqual(winnerSrc(2, 1));
+    expect(wbF.matches[0].opponent2).toEqual(winnerSrc(2, 2));
+
+    // 4 LB Runde 1: pair consecutive WB-R1 losers
+    const lb1 = byNumber(4);
+    expect(lb1.matches[0].opponent1).toEqual(loserSrc(1, 1));
+    expect(lb1.matches[0].opponent2).toEqual(loserSrc(1, 2));
+    expect(lb1.matches[1].opponent1).toEqual(loserSrc(1, 3));
+    expect(lb1.matches[1].opponent2).toEqual(loserSrc(1, 4));
+
+    // 5 LB Runde 2 (minor): LB survivors vs WB-R2 losers, straight pairing
+    const lb2 = byNumber(5);
+    expect(lb2.matches[0].opponent1).toEqual(winnerSrc(4, 1));
+    expect(lb2.matches[0].opponent2).toEqual(loserSrc(2, 1));
+    expect(lb2.matches[1].opponent1).toEqual(winnerSrc(4, 2));
+    expect(lb2.matches[1].opponent2).toEqual(loserSrc(2, 2));
+
+    // 6 LB Runde 3 (major): LB survivors paired
+    const lb3 = byNumber(6);
+    expect(lb3.matches[0].opponent1).toEqual(winnerSrc(5, 1));
+    expect(lb3.matches[0].opponent2).toEqual(winnerSrc(5, 2));
+
+    // 7 LB Finale: LB survivor vs WB-final loser
+    const lbF = byNumber(7);
+    expect(lbF.matches[0].opponent1).toEqual(winnerSrc(6, 1));
+    expect(lbF.matches[0].opponent2).toEqual(loserSrc(3, 1));
+
+    // 8 Grand Final
+    const gf = byNumber(8);
+    expect(gf.matches[0].opponent1).toEqual(winnerSrc(3, 1));
+    expect(gf.matches[0].opponent2).toEqual(winnerSrc(7, 1));
+  });
+
+  it("total match count is 2N-2 for N=4, 8, 16", () => {
+    for (const n of [4, 8, 16]) {
+      const group = gen.generateStage(stage("double_elimination"), n).groups[0];
+      const total = group.rounds.reduce((sum, r) => sum + r.matches.length, 0);
+      expect(total).toBe(2 * n - 2);
+    }
+  });
+
+  it("throws for non-power-of-two participant counts", () => {
+    expect(() => gen.generateStage(stage("double_elimination"), 6)).toThrow(
+      "Double-Elimination unterstuetzt aktuell nur Teilnehmerzahlen, die eine Zweierpotenz sind (4, 8, 16, ...)",
+    );
+  });
+});
+
 describe("unsupported formats", () => {
-  it("throws for double_elimination and swiss", () => {
-    expect(() => gen.generateStage(stage("double_elimination"), 4)).toThrow();
+  it("throws for swiss", () => {
     expect(() => gen.generateStage(stage("swiss"), 4)).toThrow();
   });
 });

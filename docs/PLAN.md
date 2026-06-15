@@ -106,8 +106,10 @@ SavedTheme(id, ownerUserId, name, tokens:jsonb)
   Round-Robin-Standings, **SSE-Live-Updates**, SVG-Bracket, Capability-Link-Sharing + öffentliche
   Live-/Score-Route, Theme-Token-Anwendung + Presets/Controls. (Drag-Reseeding & voller Theme-Editor
   mit gespeicherter Bibliothek → M2.1; double_elim-Progression → M3.)
-- **M3 — Format-Breite:** Round-Robin + Standings, Gruppen+KO (2 Stages),
-  dann **Swiss** + Tiebreaker (stark getestet).
+- **M3 — Format-Breite (in Arbeit):** ✅ **Double-Elimination** (Winner-/Loser-Bracket + Grand Final,
+  Power-of-2, voll unit-getestet inkl. Turnier-Simulation). Offen: DE-Nicht-Zweierpotenz/Byes +
+  Bracket-Reset (**M3.1**), **Gruppen+KO** mit Cross-Stage-Seeding (**M3.2**), **Swiss** + Buchholz-
+  Tiebreaker (**M3.3**). DE-Service-DB-Test, sobald eine DB verfügbar ist.
 - **M4 — Extras:** Embed-Widget + PNG/PDF-Export; Serien/Ligen (+ optional Participant-Registry);
   reichere Stats.
 
