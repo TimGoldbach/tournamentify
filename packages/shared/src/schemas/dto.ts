@@ -27,6 +27,8 @@ export type UserSyncInput = z.infer<typeof userSyncInputSchema>;
 
 export const createCapabilityLinkInputSchema = z.object({
   type: z.enum(["VIEW", "SCORE"]),
+  /** Optional lifetime; the server turns this into an absolute expiresAt. */
+  expiresInHours: z.number().int().positive().max(8760).optional(),
 });
 export type CreateCapabilityLinkInput = z.infer<typeof createCapabilityLinkInputSchema>;
 
@@ -159,3 +161,27 @@ export const capabilityLinkDtoSchema = z.object({
   expiresAt: z.string().nullable(),
 });
 export type CapabilityLinkDto = z.infer<typeof capabilityLinkDtoSchema>;
+
+// ---------------------------------------------------------------------------
+// Saved themes (account feature) + reseeding (M2.1)
+// ---------------------------------------------------------------------------
+
+export const savedThemeDtoSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  tokens: designTokensSchema,
+  createdAt: z.string(),
+});
+export type SavedThemeDto = z.infer<typeof savedThemeDtoSchema>;
+
+export const createSavedThemeInputSchema = z.object({
+  name: z.string().min(1).max(60),
+  tokens: designTokensSchema,
+});
+export type CreateSavedThemeInput = z.infer<typeof createSavedThemeInputSchema>;
+
+/** Reorder participants (new seed order) and regenerate the bracket — DRAFT only. */
+export const reseedInputSchema = z.object({
+  participantIds: z.array(z.string()).min(2),
+});
+export type ReseedInput = z.infer<typeof reseedInputSchema>;

@@ -129,17 +129,19 @@ Auth.js-v5-Flow und der BFF-SSE-Stream.
 
 ## M2 — Bekannte Follow-ups (aus dem adversarialen Review)
 
-Bewusst auf M2.1+ verschoben:
-- **Capability-Links:** Default-Expiry/TTL + Revoke-Endpoint (aktuell laufen Links nie ab); der
-  SSE-Token reist im Query-String — der Reverse-Proxy sollte `/events`-URLs nicht mit Query loggen.
-- **Voller Theme-Editor:** gespeicherte Theme-Bibliothek (`SavedTheme`-CRUD) + Farb-Picker statt
-  HSL-Textfeldern; aktuell Presets + drei Token-Felder, live angewendet & persistiert.
-- **Drag-Reseeding** des generierten Brackets (dnd-kit) — Seeding wird derzeit beim Erstellen über
-  die Eingabe-Reihenfolge gesetzt.
+**M2.1 ✅ umgesetzt:** Saved-Theme-Bibliothek (`SavedTheme`-CRUD, Account-Feature) + voller Theme-Editor
+(Color-Picker, Hex↔HSL), Capability-Link-**Expiry + Revoke**, und **Reseeding** (Reihenfolge ändern →
+Bracket-Regenerate; gesperrt sobald ein *echtes* Ergebnis existiert — Auto-Byes zählen nicht).
+Reorder ist dependency-frei (Hoch/Runter), weil dnd-kit offline nicht installierbar war.
+
+Noch offen (M3 / später):
+- **dnd-kit-Politur** fürs Reseeding (aktuell dependency-freier Hoch/Runter-Reorder).
 - **Re-Scoring/Korrektur** abgeschlossener Matches inkl. Re-Compute der Folgerunden — derzeit
   serverseitig abgelehnt (verhindert veraltete Sieger downstream).
 - **SSE-Skalierung:** `EventsService` ist prozess-lokal (eine Instanz). Multi-Replica braucht
-  Redis-Pub/Sub oder Postgres `LISTEN/NOTIFY`.
+  Redis-Pub/Sub oder Postgres `LISTEN/NOTIFY`. SSE-Token reist im Query-String → `/events`-URLs
+  nicht mit Query loggen.
+- **In-App-Dialoge** statt `window.prompt/confirm` (Theme speichern, Revoke/Delete bestätigen).
 
 ⚠️ Vor dem Start (online), wie M1: `pnpm install`, `prisma migrate`, dann `pnpm build && pnpm typecheck`.
 Besonders laufzeit-prüfen: Progression/Bye-Advance, SSE durch den BFF (EventSource sendet keine Header),

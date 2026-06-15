@@ -94,57 +94,142 @@ export class TournamentsService {
         idByIndex[index] = created.id;
       }
 
-      for (const [stageIndex, stageSetup] of input.stages.entries()) {
-        const generated = this.generator.generateStage(stageSetup, input.participants.length);
-        const stage = await tx.stage.create({
-          data: {
-            tournamentId: tournament.id,
-            type: toPrismaStageType(stageSetup.type),
-            number: stageIndex + 1,
-            // Carry the display name inside settings — Stage has no name column.
-            settings: {
-              ...stageSetup.settings,
-              name: stageSetup.name,
-            } as Prisma.InputJsonValue,
-          },
-        });
-
-        for (const group of generated.groups) {
-          const groupRow = await tx.group.create({
-            data: { stageId: stage.id, number: group.number },
-          });
-
-          for (const round of group.rounds) {
-            const roundRow = await tx.round.create({
-              data: {
-                groupId: groupRow.id,
-                number: round.number,
-                nameOverride: round.name,
-                bestOf: 1,
-              },
-            });
-
-            for (const match of round.matches) {
-              await tx.match.create({
-                data: {
-                  roundId: roundRow.id,
-                  number: match.number,
-                  status: "PENDING",
-                  opponent1: slotToJson(match.opponent1, idByIndex),
-                  opponent2: slotToJson(match.opponent2, idByIndex),
-                },
-              });
-            }
-          }
-        }
-      }
-
+      await this.generateAndPersistStages(tx, tournament.id, input.stages, idByIndex);
       await this.autoAdvanceByes(tx, tournament.id);
 
       return tournament.id;
     });
 
     return this.loadDetail(id, true);
+  }
+
+  /**
+   * Regenerate the bracket from a new seeding order (DRAFT only). The set of
+   * participant ids must be identical to the tournament's current one — this is
+   * a reorder, not an add/remove. Existing stages are dropped and rebuilt from
+   * their stored setups in the new participant order, then byes are settled.
+   */
+  async reseed(
+    actor: Actor,
+    id: string,
+    participantIds: string[],
+  ): Promise<TournamentDetailDto> {
+    await this.assertOwner(id, actor);
+
+    // Everything that guards and performs the destructive regenerate runs in one
+    // transaction, so a concurrent score() can't slip a real result past the lock.
+    await this.prisma.$transaction(async (tx) => {
+      const tournament = await tx.tournament.findUniqueOrThrow({
+        where: { id },
+        include: {
+          participants: true,
+          stages: { orderBy: { number: "asc" } },
+        },
+      });
+
+      // Lock once a real result exists. Auto-advanced byes are COMPLETED but
+      // carry no score, so they must NOT lock the seeding.
+      const scored = await this.countScored(tx, id);
+      if (scored > 0) {
+        throw new BadRequestException("Setzliste gesperrt");
+      }
+
+      // The new order must be a permutation of the existing participant ids:
+      // same length and same set (no additions, removals, or duplicates).
+      const existingIds = new Set(tournament.participants.map((p) => p.id));
+      const uniqueIncoming = new Set(participantIds);
+      if (
+        participantIds.length !== existingIds.size ||
+        uniqueIncoming.size !== participantIds.length ||
+        participantIds.some((pid) => !existingIds.has(pid))
+      ) {
+        throw new BadRequestException("Ungueltige Setzliste");
+      }
+
+      // Reuse the stored setups (type + name + format settings) but drive
+      // generation from the *new* participant order.
+      const stageSetups: TournamentSetup["stages"] = tournament.stages.map((stage) => ({
+        type: toDomainStageType(stage.type),
+        name: settingsName(stage.settings),
+        settings: stripStageName(stage.settings),
+      }));
+
+      // Apply the new seeds (1-based index in the supplied order).
+      for (const [index, participantId] of participantIds.entries()) {
+        await tx.participant.update({
+          where: { id: participantId },
+          data: { seed: index + 1 },
+        });
+      }
+
+      // Drop all stages — cascades remove groups/rounds/matches.
+      await tx.stage.deleteMany({ where: { tournamentId: id } });
+
+      await this.generateAndPersistStages(tx, id, stageSetups, participantIds);
+      await this.autoAdvanceByes(tx, id);
+      await this.recomputeStatus(tx, id);
+    });
+
+    this.events.emit(id);
+    return this.loadDetail(id, true);
+  }
+
+  /**
+   * Generate each stage's bracket and persist the Stage/Group/Round/Match rows.
+   * `idByIndex` maps the 0-based participantIndex emitted by the generator onto
+   * concrete Participant ids; its length is the participant count fed to the
+   * generator. Shared by create() and reseed().
+   */
+  private async generateAndPersistStages(
+    tx: TxClient,
+    tournamentId: string,
+    stages: TournamentSetup["stages"],
+    idByIndex: string[],
+  ): Promise<void> {
+    for (const [stageIndex, stageSetup] of stages.entries()) {
+      const generated = this.generator.generateStage(stageSetup, idByIndex.length);
+      const stage = await tx.stage.create({
+        data: {
+          tournamentId,
+          type: toPrismaStageType(stageSetup.type),
+          number: stageIndex + 1,
+          // Carry the display name inside settings — Stage has no name column.
+          settings: {
+            ...stageSetup.settings,
+            name: stageSetup.name,
+          } as Prisma.InputJsonValue,
+        },
+      });
+
+      for (const group of generated.groups) {
+        const groupRow = await tx.group.create({
+          data: { stageId: stage.id, number: group.number },
+        });
+
+        for (const round of group.rounds) {
+          const roundRow = await tx.round.create({
+            data: {
+              groupId: groupRow.id,
+              number: round.number,
+              nameOverride: round.name,
+              bestOf: 1,
+            },
+          });
+
+          for (const match of round.matches) {
+            await tx.match.create({
+              data: {
+                roundId: roundRow.id,
+                number: match.number,
+                status: "PENDING",
+                opponent1: slotToJson(match.opponent1, idByIndex),
+                opponent2: slotToJson(match.opponent2, idByIndex),
+              },
+            });
+          }
+        }
+      }
+    }
   }
 
   async list(actor: Actor): Promise<TournamentSummaryDto[]> {
@@ -251,14 +336,24 @@ export class TournamentsService {
     return { claimed: result.count };
   }
 
-  async createLink(id: string, actor: Actor, type: "VIEW" | "SCORE"): Promise<CapabilityLinkDto> {
+  async createLink(
+    id: string,
+    actor: Actor,
+    type: "VIEW" | "SCORE",
+    expiresInHours?: number,
+  ): Promise<CapabilityLinkDto> {
     await this.assertOwner(id, actor);
-    return this.links.create(id, type);
+    return this.links.create(id, type, expiresInHours);
   }
 
   async listLinks(id: string, actor: Actor): Promise<CapabilityLinkDto[]> {
     await this.assertOwner(id, actor);
     return this.links.list(id);
+  }
+
+  async revokeLink(id: string, actor: Actor, linkId: string): Promise<void> {
+    await this.assertOwner(id, actor);
+    await this.links.revoke(id, linkId);
   }
 
   /**
@@ -479,22 +574,34 @@ export class TournamentsService {
     }
   }
 
+  /** Count COMPLETED matches that carry actual entered scores (excludes byes). */
+  private async countScored(tx: TxClient, tournamentId: string): Promise<number> {
+    const matches = await tx.match.findMany({
+      where: { status: "COMPLETED", round: { group: { stage: { tournamentId } } } },
+      select: { opponent1: true, opponent2: true },
+    });
+    return matches.filter((m) => isScored(m.opponent1, m.opponent2)).length;
+  }
+
   /**
    * Derive the tournament status from its matches: COMPLETED when every match is
-   * COMPLETED, RUNNING when at least one is, otherwise DRAFT. Idempotent.
+   * COMPLETED, RUNNING once a genuinely played match exists, otherwise DRAFT.
+   * Auto-advanced byes are COMPLETED but unscored, so they keep a fresh bracket
+   * in DRAFT rather than flipping it to RUNNING. Idempotent.
    */
   private async recomputeStatus(tx: TxClient, tournamentId: string): Promise<void> {
-    const [total, completed] = await Promise.all([
+    const [total, completed, scored] = await Promise.all([
       tx.match.count({ where: { round: { group: { stage: { tournamentId } } } } }),
       tx.match.count({
         where: { status: "COMPLETED", round: { group: { stage: { tournamentId } } } },
       }),
+      this.countScored(tx, tournamentId),
     ]);
 
     let status: "DRAFT" | "RUNNING" | "COMPLETED";
     if (total > 0 && completed === total) {
       status = "COMPLETED";
-    } else if (completed > 0) {
+    } else if (scored > 0) {
       status = "RUNNING";
     } else {
       status = "DRAFT";
@@ -543,6 +650,21 @@ function slotToJson(slot: GeneratedSlot, idByIndex: string[]): Prisma.InputJsonV
       return _exhaustive;
     }
   }
+}
+
+/** A match counts as genuinely played only when BOTH opponents carry a numeric
+ * score. Auto-advanced byes are COMPLETED but unscored, so they return false. */
+function isScored(opponent1: unknown, opponent2: unknown): boolean {
+  const a = parseSlot(opponent1);
+  const b = parseSlot(opponent2);
+  return (
+    a !== null &&
+    "participantId" in a &&
+    typeof a.score === "number" &&
+    b !== null &&
+    "participantId" in b &&
+    typeof b.score === "number"
+  );
 }
 
 function settingsName(settings: Prisma.JsonValue): string {

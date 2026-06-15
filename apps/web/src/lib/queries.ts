@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+  CreateSavedThemeInput,
   CreateTournamentInput,
   ScoreInput,
   TournamentDetailDto,
@@ -95,15 +96,70 @@ export function useCapabilityLinks(id: string, enabled = true) {
     queryKey: linkKeys.list(id),
     queryFn: () => api.listCapabilityLinks(id),
     enabled: Boolean(id) && enabled,
+    retry: false, // auth-gated; don't retry a 401/403
   });
 }
 
 export function useCreateCapabilityLink(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (type: "VIEW" | "SCORE") => api.createCapabilityLink(id, type),
+    mutationFn: (vars: { type: "VIEW" | "SCORE"; expiresInHours?: number }) =>
+      api.createCapabilityLink(id, vars.type, vars.expiresInHours),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: linkKeys.list(id) });
+    },
+  });
+}
+
+export function useRevokeCapabilityLink(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (linkId: string) => api.revokeCapabilityLink(id, linkId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: linkKeys.list(id) });
+    },
+  });
+}
+
+export function useReseed(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (participantIds: string[]) => api.reseed(id, participantIds),
+    onSuccess: (detail: TournamentDetailDto) => {
+      queryClient.setQueryData(tournamentKeys.detail(id), detail);
+    },
+  });
+}
+
+export const themeKeys = {
+  list: () => ["saved-themes"] as const,
+};
+
+export function useSavedThemes(enabled = true) {
+  return useQuery({
+    queryKey: themeKeys.list(),
+    queryFn: () => api.listSavedThemes(),
+    enabled,
+    retry: false, // auth-gated; don't retry a 401/403
+  });
+}
+
+export function useCreateSavedTheme() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateSavedThemeInput) => api.createSavedTheme(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: themeKeys.list() });
+    },
+  });
+}
+
+export function useDeleteSavedTheme() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (themeId: string) => api.deleteSavedTheme(themeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: themeKeys.list() });
     },
   });
 }
